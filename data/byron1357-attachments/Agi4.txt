@@ -1,0 +1,18 @@
+const { EvoAGI } = require("./agi_core");
+
+const agi = new EvoAGI();
+
+// Register tools
+agi.registerTool("search", () => "Searching memory...");
+agi.registerTool("optimize", () => "Optimizing plan...");
+
+// Add symbolic rule
+agi.symbolicRules.push({
+  trigger: "prophecy",
+  response: "This relates to theological narrative analysis."
+});
+
+(async () => {
+  const result = await agi.simulateCycle("Evaluate prophetic consistency");
+  console.log(JSON.stringify(result, null, 2));
+})();

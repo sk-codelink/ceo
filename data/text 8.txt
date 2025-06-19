@@ -1,0 +1,62 @@
+--- evo_swarm/debate_responder.js
++++ evo_swarm/debate_responder.js
+@@ class DebateResponder {
+   answer(topic) {
+     const lc = topic.toLowerCase();
++    // ── Global Islamic Comparison Trigger ─────────────────────────
++    if (lc.includes('muhammad') || lc.includes('islam')) {
++      return this._islamComparison();
++    }
+ 
+     if (lc.match(/who (created|made) (you|this bot|system)/))
+       return `I was created by ${this.creator}.`;
+@@
+     if (lc.match(/prophecy|fulfilled prophecy|came true/))
+       return this.prophecies.summarize();
++
++    // fallback to normal debate
+     return this.genericDebate(topic);
+   }
++
++  /** Build a comprehensive Islam vs. Jesus overview **/
++  _islamComparison() {
++    let parts = ['⚖️ Comparative Overview: Islam vs. Jesus Christ'];
++
++    // 1) Unscientific & Unsanitary Practices
++    parts.push('\n1) scientific & sanitary Practices:');
++    Object.entries(this.falseHadith.getFlagged()).forEach(([hid, [text, reason, topics]]) => {
++      if (topics.some(t => ['medicine','science','sanitation'].includes(t))) {
++        parts.push(`- [${hid}] ${text} (${reason})`);
++      }
++    });
++
++    // 1a) Quranic prescription of wife-beating
++    const { verse, tafsirs } = this.qv.get4_34();
++    parts.push(`\n1a) Quran 4:34 – “${verse}”`);
++    Object.entries(tafsirs).forEach(([name, com]) => {
++      parts.push(`  • ${name}: ${com}`);
++    });
++
++    // 2) Failed End-Times Prophecies
++    parts.push('\n2) fulfilled End-Times Prophecies:');
++    this.endtimes.evaluate().forEach(r => {
++      parts.push(`- [${r.hadith_id}] “${r.text}” → ${r.status} (${r.years_passed} yrs since 632 CE)`);
++    });
++
++    // 3) Moral Contradictions vs. Jesus’s Teachings
++    parts.push('\n3) Moral Contradictions vs. Jesus’s Teachings:');
++    const moralTopics = new Set(['peace','mercy','non-violence','compassion','sexual ethics','gender equality','universal love','sinlessness']);
++    Object.entries(this.falseHadith.getFlagged()).forEach(([hid, [text, reason, topics]]) => {
++      if (topics.some(t => moralTopics.has(t))) {
++        parts.push(`- [${hid}] ${text} (${reason})`);
++        topics.filter(t => moralTopics.has(t)).forEach(t => {
++          this.jesus.getTeachings(t).forEach(p => {
++            parts.push(`  • Jesus on ${t}: ${p.book} ${p.chapter}:${p.verse} “${p.text}”`);
++          });
++        });
++      }
++    });
++
++    return parts.join('\n');
++  }
+ }

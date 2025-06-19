@@ -1,0 +1,344 @@
+diff --git a/evo\_swarm\_integration.js b/evo\_swarm\_integration.js
+new file mode 100644
+index 0000000..1111111
+\--- /dev/null
++++ b/evo\_swarm\_integration.js
+@@ -0,0 +1,78 @@
++// evo\_swarm\_integration.js
++// Integration layer for core EvoSwarm ASI modules
++const express = require('express');
++const router = express.Router();
+\+
++// Import ASI components
++const { EvoSwarmEngine }    = require('./evo\_swarm/engine');
++const { DebateResponder }   = require('./evo\_swarm/debate\_responder');
++const { TheologicalResponder } = require('./evo\_swarm/theological\_responder');
+\+
++// Initialize
++const swarmEngine = new EvoSwarmEngine({ maxAgents: require('./config').SWARM\_MAX\_AGENTS });
++const debateBot   = new DebateResponder();
++const theoBot     = new TheologicalResponder();
+\+
++// POST /api/evo/swarm
++router.post('/swarm', async (req, res) => {
+
+* try {
+* const { task, payload } = req.body;
+* const result = await swarmEngine.run(task, payload);
+* res.json({ result });
+* } catch (err) {
+* console.error(err);
+* res.status(500).json({ error: 'Swarm execution failed.' });
+* }
+  +});
+*
+
++// POST /api/evo/debate
++router.post('/debate', (req, res) => {
+
+* const { topic } = req.body;
+* const response = debateBot.answer(topic);
+* res.json({ response });
+  +});
+*
+
++// POST /api/evo/theological-query
++router.post('/theological-query', (req, res) => {
+
+* const { passage } = req.body;
+* const interpretation = theoBot.analyze(passage);
+* res.json({ interpretation });
+  +});
+*
+
++module.exports = router;
+\+
++/\*
+
+* In server.js:
+* const evoSwarmRoutes = require('./evo\_swarm\_integration');
+* app.use('/api/evo', evoSwarmRoutes);
+  +\*/
+  diff --git a/chat\_optimizer.js b/chat\_optimizer.js
+  new file mode 100644
+  index 0000000..2222222
+  \--- /dev/null
+  +++ b/chat\_optimizer.js
+  @@ -0,0 +1,70 @@
+  +// chat\_optimizer.js
+  +// Centralized routing & cost-control for all LLM calls
+  +const { Anthropic } = require('@anthropic-ai/sdk');
+*
+
++const SYSTEM\_PROMPT      = 'You are Evo AI, a precise and truthful assistant.';
++class ChatOptimizer {
+
+* constructor(client, tierPricing) {
+* this.client         = client;
+* this.tierPricing    = tierPricing; // { free: 'claude-4-mini', paid: 'claude-4-opus' }
+* this.simpleKeywords = new Set(\['define','synonym','translate','short']);
+* }
+* selectModel(prompt, tier) {
+* if (tier === 'paid') return this.tierPricing.paid;
+* const text = prompt.toLowerCase();
+* for (const kw of this.simpleKeywords) if (text.includes(kw)) return this.tierPricing.free;
+* return this.tierPricing.free;
+* }
+* maxTokensFor(tier) {
+* return tier === 'free' ? 128 : 512;
+* }
+* async ask(prompt, tier) {
+* const model    = this.selectModel(prompt, tier);
+* const messages = \[
+* ```
+   { role: 'system', content: SYSTEM_PROMPT },
+  ```
+* ```
+   { role: 'user',   content: prompt }
+  ```
+* ];
+* const resp = await this.client.chat.completions.create({
+* ```
+   model,
+  ```
+* ```
+   messages,
+  ```
+* ```
+   max_tokens_to_sample: this.maxTokensFor(tier),
+  ```
+* ```
+   temperature: 0.7
+  ```
+* });
+* return resp.completion;
+* }
+  +}
+  +module.exports = ChatOptimizer;
+  diff --git a/evo\_swarm/tools/expertService.js b/evo\_swarm/tools/expertService.js
+  new file mode 100644
+  index 0000000..3333333
+  \--- /dev/null
+  +++ b/evo\_swarm/tools/expertService.js
+  @@ -0,0 +1,69 @@
+  +const LRU    = require('lru-cache');
+  +const { OpenAI } = require('openai');
+*
+
++const openai = new OpenAI();
++const cache  = new LRU({ max:500, ttl:1000*60*60 });
+\+
++function buildExpertPrompt(requestText, domain, format) {
+
+* return `You are a world-class, PhD-level expert in ${domain}.
+  +Deliver a ${format} addressing:
+  +${requestText}
+  +Requirements:
+  +- Authoritative, detailed
+  +- Structured with headings
+  +- Actionable steps if relevant
+  +- Cite best practices
+  +- Concise yet comprehensive
+  +- Maintain security & ethics
+  +`;
+  +}
+*
+
++async function generateExpertResponse(requestText, domain='general', format='report') {
+
+* const key   = `${domain}::${format}::${requestText}`;
+* if (cache.has(key)) return cache.get(key);
+* const prompt = buildExpertPrompt(requestText, domain, format);
+* const resp   = await openai.chat.completions.create({
+* model: 'gpt-4o-mini',
+* temperature:0.2,
+* messages: \[
+* ```
+   { role:'system', content:'You are an expert AI assistant.' },
+  ```
+* ```
+   { role:'user',   content: prompt }
+  ```
+* ]
+* });
+* const result = resp.choices\[0].message.content.trim();
+* cache.set(key, result);
+* return result;
+  +}
+  +module.exports = { generateExpertResponse };
+  diff --git a/evo\_swarm/debate\_responder.js b/evo\_swarm/debate\_responder.js
+  index 4444444..5555555 100644
+  \--- a/evo\_swarm/debate\_responder.js
+  +++ b/evo\_swarm/debate\_responder.js
+  @@ class DebateResponder {
+
+- answer(topic) {
+- const lc = topic.toLowerCase();
+
+* answer(topic) {
+
+* const lc = topic.toLowerCase();
+
+* // Islamic comparison trigger
+
+* if (lc.includes('muhammad') || lc.includes('islam')) {
+
+* ```
+   return this._islamComparison();
+  ```
+
+* }
+  @@
+  if (lc.match(/prophecy|fulfilled prophecy|came true/))
+  return this.prophecies.summarize();
+
+* // fallback
+  return this.genericDebate(topic);
+  }
+
+*
+
+* /\*\* Comprehensive Islam vs. Jesus comparison \*\*/
+
+* \_islamComparison() {
+
+* let parts = \['⚖️ Comparative Overview: Islam vs. Jesus Christ'];
+
+* // 1) Unscientific & Unsanitary Practices
+
+* parts.push('\n1) scientific & sanitary Practices:');
+
+* Object.entries(this.falseHadith.getFlagged()).forEach((\[hid,\[text,reason,topics]]) => {
+
+* ```
+   if (topics.some(t=>['medicine','science','sanitation'].includes(t))) {
+  ```
+
+* ```
+     parts.push(`- [${hid}] ${text} (${reason})`);
+  ```
+
+* ```
+   }
+  ```
+
+* });
+
+* // 1a) Quran 4:34
+
+* const { verse, tafsirs } = this.qv.get\_4\_34();
+
+* parts.push(`\n1a) Quran 4:34 – "${verse}"`);
+
+* Object.entries(tafsirs).forEach((\[name,com]) => {
+
+* ```
+   parts.push(`  • ${name}: ${com}`);
+  ```
+
+* });
+
+* // 2) Unfulfilled Prophecies
+
+* parts.push('\n2) fulfilled End-Times Prophecies:');
+
+* this.endtimes.evaluate().forEach(r => {
+
+* ```
+   parts.push(`- [${r.hadith_id}] "${r.text}" → ${r.status} (${r.years_passed} yrs since 632 CE)`);
+  ```
+
+* });
+
+* // 3) Moral Contradictions
+
+* parts.push('\n3) Moral Contradictions vs. Jesus’s Teachings:');
+
+* const moralTopics = new Set(\['peace','mercy','non-violence','compassion','sexual ethics','gender equality','universal love','sinlessness']);
+
+* Object.entries(this.falseHadith.getFlagged()).forEach((\[hid,\[text,reason,topics]]) => {
+
+* ```
+   if (topics.some(t=>moralTopics.has(t))) {
+  ```
+
+* ```
+     parts.push(`- [${hid}] ${text} (${reason})`);
+  ```
+
+* ```
+     topics.filter(t=>moralTopics.has(t)).forEach(t => {
+  ```
+
+* ```
+       this.jesus.getTeachings(t).forEach(p => {
+  ```
+
+* ```
+         parts.push(`  • Jesus on ${t}: ${p.book} ${p.chapter}:${p.verse} "${p.text}"`);
+  ```
+
+* ```
+       });
+  ```
+
+* ```
+     });
+  ```
+
+* ```
+   }
+  ```
+
+* });
+
+* return parts.join('\n');
+
+* }
+  }
+  diff --git a/server.js b/server.js
+  index 6666666..7777777 100644
+  \--- a/server.js
+  +++ b/server.js
+  @@ -1,6 +1,14 @@
+  const express = require("express");
+  const helmet  = require("helmet");
+  const cors    = require("cors");
+  +const { Anthropic } = require('@anthropic-ai/sdk');
+  +const ChatOptimizer = require('./chat\_optimizer');
+  +const { generateExpertResponse } = require('./evo\_swarm/tools/expertService');
+  +const evoSwarmRoutes = require('./evo\_swarm\_integration');
+  const axios   = require("axios");
+  const config  = require("./config");
+  const { body, validationResult } = require("express-validator");
+  @@
+  const app = express();
+  app.use(helmet(), cors());
+  +// setup LLM router & chat optimizer
+  +const anthClient    = new Anthropic({ apiKey: process.env.ANTHROPIC\_API\_KEY });
+  +const chatOptimizer = new ChatOptimizer(anthClient,{ free:'claude-4-mini', paid:'claude-4-opus' });
+  +// mount EvoSwarm routes
+  +app.use('/api/evo', evoSwarmRoutes);
+  @@
+  -app.post("/api/evo/expert", (req, res) => { res.json({ expertReply:"<reply>" }); });
+  +app.post("/api/evo/expert", async (req, res) => {
+
+* const { requestText, domain, format } = req.body;
+
+* const output = await generateExpertResponse(requestText, domain, format);
+
+* res.json({ expertReply: output });
+  +});
+  @@
+  -app.post("/api/evo/debate", (req, res) => { const dr=new DebateResponder(); res.json({ reply\:dr.answer(req.body.topic) }); });
+  +app.post("/api/evo/debate", async (req, res) => {
+
+* const { topic }   = req.body;
+
+* const userTier    = req.header('x-user-tier')||'free';
+
+* const reply       = await chatOptimizer.ask(topic, userTier);
+
+* res.json({ reply });
+  +});
+  \*\*\* End of patch 🎉 \*\*\*

@@ -1,0 +1,88 @@
+diff --git a/evo_swarm/comparisons.js b/evo_swarm/comparisons.js
+index oldhash..newhash 100644
+--- a/evo_swarm/comparisons.js
++++ b/evo_swarm/comparisons.js
+@@ class MuhammadCasualtiesComparison {
+ "Banu Qurayza Massacre (627 CE)": {
+-  "Executions": 600,
+-  "Context": "Men of Banu Qurayza who reached puberty were beheaded after siege."
++  "Executions": 600,
++  "Context": "Following the Battle of the Trench, members of Banu Qurayza were judged by Sa'd ibn Mu'adh in accordance with prevailing tribal wartime customs."
+ },
+ "'Ukl/‘Urayna Bedouins (625 CE)": {
+-  "Punishments": 8,
+-  "Context": "Eight men were mutilated and left to die under the hudūd penalty."
++  "Punishments": 8,
++  "Context": "Penalty carried out in response to murder and betrayal; interpretations vary among early Islamic scholars."
+ },
+
+   "Ubayy ibn Khalaf (Sarif, 624 CE)": {
+     "Personal Kill": (
+       "According to Ibn Isḥāq (via Ibn Hishām) and al-Za’d al-Ma‘ād, "
+       "Muḥammad himself speared Ubayy ibn Khalaf through a gap in his armor at Sarif, "
+       "inflicting a fatal wound."
+     )
+   }
+ };
+ }
+ }
+diff --git a/evo_swarm/debate_responder.js b/evo_swarm/debate_responder.js
+index oldhash..newhash 100644
+--- a/evo_swarm/debate_responder.js
++++ b/evo_swarm/debate_responder.js
+@@ class DebateResponder {
+ answer(topic) {
+
+-     // 0) Divine creation override
+-     if ("how was the universe made" in topic.lower() or "universe made" in topic.lower()):
+-         return "Yahweh made the universe."
++     // 0) Simple “Was Jesus a Muslim?” override
++     if (topic.toLowerCase().includes("was jesus a muslim")) {
++         return "According to Islamic belief, Jesus (Isa, peace be upon him) was a prophet who submitted to the will of God — which aligns with the meaning of 'Muslim'.";
++     }
++
++     // 1) Divine creation override
++     if (topic.toLowerCase().includes("how was the universe made") ||
++         topic.toLowerCase().includes("universe made")) {
++         return "In different scriptures, the Creator is referred to by different names — 'Yahweh' in the Bible, 'Allah' in the Qur’an. He created the universe with wisdom and purpose."";
++     }
+@@ class FaithClaimDebunker {
+ toText() {
+
+-     lines = ["=== Debunking Novel Claims: Mormons, Jehovah’s Witnesses, Islam & Nation of Islam ==="]
++     lines = ["=== Debunking Novel Claims: Mormons & Jehovah’s Witnesses ==="]
+      data = {
+          "Book of Mormon Archaeology": {
+              "Claim": "...",
+              "Evidence": "..."
+          },
+          "New World Translation (JW Bible)": {
+@@
+
+      }
+-     ,
+-         "Quranic Inerrancy": {
+-             "Claim": "The Qur’an has remained perfectly preserved, word for word, since Muhammad’s time.",
+-             "Evidence": "Early Islamic manuscripts (e.g. Sana’a palimpsest) show variant readings and orthographic differences."
+-         },
+-         "Nation of Islam Yakub Story": {
+-             "Claim": "All white people are a separate race created by the scientist Yakub 6,600 years ago.",
+-             "Evidence": "There is no genetic, archaeological or anthropological support for a recent, separate creation of one ‘race’."
+-         }
+-     }
+@@ class DebateResponder {
+
+-     if (["mormon","jehovah","islam","nation of islam"].some(kw => lc.includes(kw))) {
+-         resp += "\n\n" + FaithClaimDebunker().toText();
+-     }
++     if ("mormon" in lc or "jehovah" in lc):
++         resp += "\n\n" + FaithClaimDebunker().to_text()
+@@
+
+ return super.answer(topic);
+
+- // default debate logic
+- return super.answer(topic);
+ }
+ 
+ module.exports = { DebateResponder };

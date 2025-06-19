@@ -1,0 +1,26 @@
+ const { generateExpertCode }     = require('../evo_swarm/tools/simpleCodeGenerator');
++const { generateExpertTool }     = require('../evo_swarm/tools/expertCodeGenerator');
+
+ module.exports = function(app) {
+   // … existing routes …
+
+-  // POST /api/evo/generate-code
+-  app.post('/api/evo/generate-code', async (req, res) => {
++  // POST /api/evo/generate-tool
++  app.post('/api/evo/generate-tool', async (req, res) => {
+     try {
+       const { requestText, toolName, capabilities } = req.body;
+       if (!requestText) {
+         return res.status(400).json({ error: 'Missing requestText' });
+       }
+
+-      const code = await generateExpertCode(requestText, language);
+-      res.json({ code });
++      const code = await generateExpertTool(requestText, toolName, capabilities);
++      res.json({ code });
+
+     } catch (err) {
+       console.error('generate-tool error:', err);
+       res.status(500).json({ error: 'Internal server error' });
+     }
+   });

@@ -1,0 +1,126 @@
+// evo_swarm/tools/expertService.js
+// Unified expert service for text, code, tools, and plans
+
+const LRU      = require('lru-cache');
+const { OpenAI } = require('openai');
+
+const openai = new OpenAI();
+const cache = new LRU({ max: 500, ttl: 1000 * 60 * 60 }); // 1h cache
+
+/**
+ * Build a dynamic expert prompt based on type
+ * @param {string} requestText - user request
+ * @param {Object} opts - options for generation
+ * @param {string} opts.type - one of 'text','code','tool','plan'
+ * @param {string} [opts.domain] - domain for expert-level text
+ * @param {string} [opts.format] - format for text (e.g., 'essay','report')
+ * @param {string} [opts.language] - programming language for code
+ * @param {string} [opts.toolName] - name for generated tool
+ * @param {string[]} [opts.capabilities] - list of tool capabilities
+ */
+function buildPrompt(requestText, opts = {}) {
+  const {
+    type = 'text', domain = 'general', format = 'report',
+    language = 'TypeScript', toolName = 'CustomTool', capabilities = []
+  } = opts;
+  let userPrompt = '';
+
+  switch (type) {
+    case 'code':
+      userPrompt = `You are a world-class, PhD-level software engineer.
+Write clean, modular, secure, and well-documented ${language} code to solve:
+
+${requestText}
+
+Requirements:
+- Input validation and error handling
+- Inline comments and documentation
+- Unit tests (happy path & edge cases)
+- Security best practices
+- Performance optimizations
+- Follow industry-standard style guides
+`;
+      break;
+
+    case 'tool':
+      const caps = capabilities.length
+        ? capabilities.map(c => `- ${c}`).join("\n")
+        : '- Core functionality aligned with user request';
+      userPrompt = `You are a world-class AI software architect.
+Produce a fully functional code module named '${toolName}' that implements:
+
+${requestText}
+
+Required Capabilities:
+${caps}
+
+Additional Requirements:
+- Modular, maintainable code
+- Inline docs & comments
+- Configuration & dependencies
+- Unit tests & examples
+- Security & validation
+- README with usage
+- Industry best practices
+`;
+      break;
+
+    case 'plan':
+      userPrompt = `You are an expert consultant.
+Draft a comprehensive ${format} that addresses:
+
+${requestText}
+
+Include:
+- Executive summary
+- Step-by-step implementation plan
+- Roles & responsibilities
+- Timeline & milestones
+- Risk analysis & mitigation
+- References to best practices
+`;
+      break;
+
+    case 'text':
+    default:
+      userPrompt = `You are a world-class, PhD-level expert in ${domain}.
+Please deliver a ${format} that fully addresses:
+
+${requestText}
+
+Requirements:
+- Authoritative and accurate
+- Clear structure and headings
+- Cite sources or best practices
+- Concise yet comprehensive
+`;
+  }
+  return userPrompt;
+}
+
+/**
+ * Generate expert content of various types, caching results.
+ * @param {string} requestText
+ * @param {Object} opts - as in buildPrompt
+ * @returns {Promise<string>}
+ */
+async function generateExpert(requestText, opts = {}) {
+  const key = JSON.stringify({ requestText, opts });
+  if (cache.has(key)) return cache.get(key);
+
+  const prompt = buildPrompt(requestText, opts);
+  const resp = await openai.chat.completions.create({
+    model: 'gpt-4o-mini',
+    temperature: 0.2,
+    messages: [
+      { role: 'system', content: 'You are an expert AI assistant.' },
+      { role: 'user',   content: prompt }
+    ]
+  });
+
+  const result = resp.choices[0].message.content.trim();
+  cache.set(key, result);
+  return result;
+}
+
+module.exports = { generateExpert };

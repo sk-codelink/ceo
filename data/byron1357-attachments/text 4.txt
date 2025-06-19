@@ -1,0 +1,75 @@
+// evo_swarm_integration.js
+// Integration layer for EvoSwarm ASI modules into your MVP
+
+const express = require('express');
+const router = express.Router();
+
+// Import your core ASI components
+const { EvoSwarmEngine }    = require('./evo_swarm/engine');
+const { ExpertResponder }   = require('./evo_swarm/expert_responder');
+const { DebateResponder }   = require('./evo_swarm/debate_responder');
+const { TheologicalResponder } = require('./evo_swarm/theological_responder');
+
+// Initialize instances
+const swarmEngine   = new EvoSwarmEngine({ maxAgents: require('./config').SWARM_MAX_AGENTS });
+const expertBot     = new ExpertResponder();
+const debateBot     = new DebateResponder();
+const theoBot       = new TheologicalResponder();
+
+// ─── Swarm Endpoint ──────────────────────────────────────────────────────
+// POST /api/evo/swarm
+// Body: { task: string, payload: object }
+router.post('/swarm', async (req, res) => {
+  try {
+    const { task, payload } = req.body;
+    const result = await swarmEngine.run(task, payload);
+    res.json({ result });
+  } catch (err) {
+    console.error('Swarm error:', err);
+    res.status(500).json({ error: 'Swarm execution failed.' });
+  }
+});
+
+// ─── Expert Q&A Endpoint ─────────────────────────────────────────────────
+// POST /api/evo/expert
+// Body: { question: string }
+router.post('/expert', async (req, res) => {
+  const { question } = req.body;
+  try {
+    const answer = await expertBot.answer(question);
+    res.json({ answer });
+  } catch (err) {
+    console.error('Expert error:', err);
+    res.status(500).json({ error: 'Expert responder failed.' });
+  }
+});
+
+// ─── Debate Endpoint ─────────────────────────────────────────────────────
+// POST /api/evo/debate
+// Body: { topic: string }
+router.post('/debate', (req, res) => {
+  const { topic } = req.body;
+  try {
+    const response = debateBot.answer(topic);
+    res.json({ response });
+  } catch (err) {
+    console.error('Debate error:', err);
+    res.status(500).json({ error: 'Debate responder failed.' });
+  }
+});
+
+// ─── Theological Query Endpoint ─────────────────────────────────────────
+// POST /api/evo/theological-query
+// Body: { passage: string }
+router.post('/theological-query', (req, res) => {
+  const { passage } = req.body;
+  try {
+    const interpretation = theoBot.analyze(passage);
+    res.json({ interpretation });
+  } catch (err) {
+    console.error('Theological error:', err);
+    res.status(500).json({ error: 'Theological responder failed.' });
+  }
+});
+
+module.exports = router;
