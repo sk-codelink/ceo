@@ -6,15 +6,15 @@ export default async function handler(req, res) {
   try {
     res.status(200).json({ 
       status: "ok", 
-      timestamp: new Date().toISOString(),
-      environment: "vercel",
-      services: {
-        chatOptimizer: !!process.env.ANTHROPIC_API_KEY,
-        evoSwarm: true,
-        security: true,
-        expertService: true
-      },
-      version: "1.0.0"
+      // timestamp: new Date().toISOString(),
+      // environment: "vercel",
+      // services: {
+      //   chatOptimizer: !!process.env.ANTHROPIC_API_KEY,
+      //   evoSwarm: true,
+      //   security: true,
+      //   expertService: true
+      // },
+      // version: "1.0.0"
     });
   } catch (error) {
     res.status(500).json({ 
