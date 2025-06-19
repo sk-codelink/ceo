@@ -1,18 +1,6 @@
 {
   "version": 2,
   "name": "evo-ai-api",
-  "builds": [
-    {
-      "src": "api/**/*.js",
-      "use": "@vercel/node"
-    }
-  ],
-  "routes": [
-    {
-      "src": "/api/(.*)",
-      "dest": "/api/$1"
-    }
-  ],
   "functions": {
     "api/**/*.js": {
       "maxDuration": 30
