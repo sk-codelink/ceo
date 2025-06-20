@@ -6,6 +6,18 @@
       "maxDuration": 30
     }
   },
+  "builds": [
+    {
+      "src": "api/**/*.js",
+      "use": "@vercel/node"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "/api/$1"
+    }
+  ],
   "env": {
     "ANTHROPIC_API_KEY": "",
     "JWT_SECRET": "",
