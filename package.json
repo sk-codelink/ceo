@@ -1,0 +1,44 @@
+{
+  "name": "evo-ai-centralized-api",
+  "version": "1.0.0",
+  "description": "Centralized API layer for EvoSwarm ASI with debate, expert services, and security - Vercel Ready",
+  "type": "module",
+  "scripts": {
+    "dev": "node server.js",
+    "dev:vercel": "vercel dev",
+    "build": "echo 'No build step required for Vercel'",
+    "test": "jest",
+    "lint": "eslint .",
+    "security-check": "npm audit"
+  },
+  "keywords": [
+    "ai",
+    "api",
+    "debate",
+    "expert-system",
+    "security",
+    "evo-swarm",
+    "vercel",
+    "serverless"
+  ],
+  "author": "Byron Knoll & Sushil",
+  "license": "MIT",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.24.3",
+    "cors": "^2.8.5",
+    "express": "^5.1.0",
+    "jsonwebtoken": "^9.0.2"
+  },
+  "devDependencies": {
+    "eslint": "^8.57.0",
+    "jest": "^29.7.0",
+    "vercel": "^32.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-org/evo-ai-api"
+  }
+}

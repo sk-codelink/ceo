@@ -1,0 +1,33 @@
+{
+  "version": 2,
+  "name": "evo-ai-api-ceo",
+  "functions": {
+    "api/**/*.js": {
+      "maxDuration": 30
+    }
+  },
+  "env": {
+    "ANTHROPIC_API_KEY": "",
+    "JWT_SECRET": "",
+    "SWARM_MAX_AGENTS": "5"
+  },
+  "headers": [
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "*"
+        },
+        {
+          "key": "Access-Control-Allow-Methods",
+          "value": "GET, POST, PUT, DELETE, OPTIONS"
+        },
+        {
+          "key": "Access-Control-Allow-Headers",
+          "value": "Content-Type, Authorization, x-user-tier"
+        }
+      ]
+    }
+  ]
+} 
