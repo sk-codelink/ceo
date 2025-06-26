@@ -1,0 +1,69 @@
+// chat_optimizer.js
+// Centralized routing & cost-control for all LLM calls in the MVP
+
+const { Anthropic } = require('@anthropic-ai/sdk');
+
+// Replace these with your actual prompts or system messages
+const SYSTEM_PROMPT = 'You are Evo AI, a precise and truthful assistant.';
+const ANTHROPIC_HUMAN_PROMPT = '\n
+Human:';
+const ANTHROPIC_AI_PROMPT = '\n
+Assistant:';
+
+class ChatOptimizer {
+  /**
+   * @param {Anthropic} client  - instantiated Anthropic client
+   * @param {{free: string, paid: string}} tierPricing  - model mapping per tier
+   */
+  constructor(client, tierPricing) {
+    this.client = client;
+    this.tierPricing = tierPricing;
+    this.simpleKeywords = new Set(['define', 'synonym', 'translate', 'short']);
+  }
+
+  /**
+   * Pick model based on prompt complexity and user tier
+   */
+  selectModel(prompt, tier) {
+    if (tier === 'paid') {
+      return this.tierPricing.paid;
+    }
+    const lower = prompt.toLowerCase();
+    for (const kw of this.simpleKeywords) {
+      if (lower.includes(kw)) {
+        return this.tierPricing.free;
+      }
+    }
+    return this.tierPricing.free;
+  }
+
+  /**
+   * Token limit by tier
+   */
+  maxTokensFor(tier) {
+    return tier === 'free' ? 128 : 512;
+  }
+
+  /**
+   * Single entrypoint for all chat/LLM calls
+   * @param {string} prompt
+   * @param {string} tier
+   * @returns {Promise<string>}
+   */
+  async ask(prompt, tier) {
+    const model = this.selectModel(prompt, tier);
+    const messages = [
+      { role: 'system',  content: SYSTEM_PROMPT },
+      { role: 'user',    content: prompt }
+    ];
+    const resp = await this.client.chat.completions.create({
+      model,
+      messages,
+      max_tokens_to_sample: this.maxTokensFor(tier),
+      temperature: 0.7
+    });
+    return resp.completion;
+  }
+}
+
+module.exports = ChatOptimizer;

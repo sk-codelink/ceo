@@ -1,0 +1,102 @@
+import os
+import time
+import ssl
+import json
+import logging
+from flask import Flask, request, abort
+from functools import wraps
+from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+import boto3
+
+# ─── Key Management via AWS KMS ───────────────────────────────────────────
+kms_client = boto3.client('kms', region_name=os.getenv('AWS_REGION'))
+DATA_KEY_ID = os.getenv('KMS_DATA_KEY_ID')  # Set this to your KMS key ARN or ID
+
+def get_data_key():
+    """
+    Generates a one-time data key:
+    - Plaintext: used for AES-256 encrypt/decrypt
+    - CiphertextBlob: store this alongside your data to decrypt later
+    """
+    response = kms_client.generate_data_key(KeyId=DATA_KEY_ID, KeySpec='AES_256')
+    return response['Plaintext'], response['CiphertextBlob']
+
+# ─── AES-256 Data-at-Rest Encryption/Decryption ───────────────────────────
+def encrypt_data(plaintext: bytes, key: bytes) -> bytes:
+    aesgcm = AESGCM(key)
+    nonce = os.urandom(12)
+    ct = aesgcm.encrypt(nonce, plaintext, None)
+    return nonce + ct
+
+def decrypt_data(ciphertext: bytes, key: bytes) -> bytes:
+    aesgcm = AESGCM(key)
+    nonce = ciphertext[:12]
+    ct = ciphertext[12:]
+    return aesgcm.decrypt(nonce, ct, None)
+
+# ─── Role-Based Access Control (RBAC) ───────────────────────────────────────
+USERS = {
+    'user1': {'role': 'admin'},
+    'user2': {'role': 'user'},
+}
+
+def require_role(role):
+    def decorator(f):
+        @wraps(f)
+        def wrapper(*args, **kwargs):
+            user_id = request.headers.get('X-User-ID')
+            if not user_id or USERS.get(user_id, {}).get('role') != role:
+                abort(403)
+            return f(*args, **kwargs)
+        return wrapper
+    return decorator
+
+# ─── Immutable Audit Logging ───────────────────────────────────────────────
+audit_logger = logging.getLogger('audit')
+audit_logger.setLevel(logging.INFO)
+handler = logging.FileHandler('immutable_audit.log')  # Consider S3 or CloudWatch with WORM config
+audit_logger.addHandler(handler)
+
+def audit_event(event_type: str, details: dict):
+    entry = {'timestamp': int(time.time()*1000), 'event': event_type, 'details': details}
+    audit_logger.info(json.dumps(entry))
+
+# ─── Flask App with TLS 1.3 ────────────────────────────────────────────────
+app = Flask(__name__)
+
+@app.route('/encrypt', methods=['POST'])
+@require_role('admin')
+def encrypt_endpoint():
+    data = request.get_json().get('data', '')
+    plaintext = data.encode()
+    key_plain, key_encrypted = get_data_key()
+    ct = encrypt_data(plaintext, key_plain)
+    # Persist `ct` and `key_encrypted` to your datastore
+    audit_event('encrypt', {'user': request.headers.get('X-User-ID')})
+    return {'ciphertext': ct.hex(), 'encrypted_key': key_encrypted.hex()}
+
+@app.route('/decrypt', methods=['POST'])
+@require_role('admin')
+def decrypt_endpoint():
+    payload = request.get_json()
+    ct = bytes.fromhex(payload.get('ciphertext', ''))
+    encrypted_key = bytes.fromhex(payload.get('encrypted_key', ''))
+    response = kms_client.decrypt(CiphertextBlob=encrypted_key)
+    key_plain = response['Plaintext']
+    plaintext = decrypt_data(ct, key_plain)
+    audit_event('decrypt', {'user': request.headers.get('X-User-ID')})
+    return {'data': plaintext.decode()}
+
+if __name__ == '__main__':
+    # Ensure you have server.crt and server.key files
+    context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+    context.minimum_version = ssl.TLSVersion.TLSv1_3
+    context.load_cert_chain(certfile='server.crt', keyfile='server.key')
+    app.run(host='0.0.0.0', port=443, ssl_context=context)
+
+# ─── Vulnerability Scanning (CI/CD) ──────────────────────────────────────
+# Add to your pipeline:
+#   #!/bin/bash
+#   bandit -r . -f json -o bandit_report.json
+#   snyk test --json > snyk_report.json
+#   trivy fs . --exit-code 1

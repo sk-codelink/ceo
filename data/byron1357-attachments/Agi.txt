@@ -1,0 +1,70 @@
+const memory = [];
+const tools = {};
+const fs = require("fs");
+const { spawn } = require("child_process");
+
+class EvoAGI {
+  constructor(name = "EvoAI") {
+    this.name = name;
+    this.memory = memory;
+    this.modules = {};
+    this.goals = [];
+  }
+
+  registerTool(name, fn) {
+    tools[name] = fn;
+  }
+
+  perceive(input) {
+    const thought = `Perceived: ${input}`;
+    this.memory.push(thought);
+    return thought;
+  }
+
+  think(prompt) {
+    const plan = `To handle: "${prompt}", I must assess goals, recall past events, and model consequences.`;
+    this.memory.push(plan);
+    return plan;
+  }
+
+  decide(actions) {
+    const selected = actions[0];
+    this.memory.push(`Chose: ${selected}`);
+    return selected;
+  }
+
+  act(action) {
+    if (tools[action]) {
+      const result = tools[action]();
+      this.memory.push(`Executed ${action} → ${result}`);
+      return result;
+    } else {
+      this.memory.push(`Tried unknown action: ${action}`);
+      return "Unknown action";
+    }
+  }
+
+  selfImprove() {
+    const insight = `Reflecting on ${this.memory.length} past steps... optimizing tool usage.`;
+    this.memory.push(insight);
+    return insight;
+  }
+
+  async simulateCycle(input) {
+    const perception = this.perceive(input);
+    const plan = this.think(perception);
+    const choice = this.decide(Object.keys(tools));
+    const result = this.act(choice);
+    const reflection = this.selfImprove();
+
+    return {
+      perception, plan, choice, result, reflection
+    };
+  }
+
+  saveMemory(path = "agi_memory.json") {
+    fs.writeFileSync(path, JSON.stringify(this.memory, null, 2));
+  }
+}
+
+module.exports = { EvoAGI };

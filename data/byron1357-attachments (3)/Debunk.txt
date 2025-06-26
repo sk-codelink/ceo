@@ -1,0 +1,111 @@
+import re
+
+class FaithClaimDebunker:
+    def to_text(self, religions=None):
+        all_data = {
+            "Mormonism": {
+                "Book of Mormon Archaeology": {
+                    "Claim": "The Book of Mormon describes ancient civilizations in the Americas.",
+                    "Evidence": "No independent archaeological evidence has been found to support the existence of Nephite or Lamanite civilizations."
+                },
+                "Golden Plates of Joseph Smith": {
+                    "Claim": "Joseph Smith translated the Book of Mormon from gold tablets shown to him by an angel.",
+                    "Evidence": "There is no physical evidence of the plates; Smith claimed to have returned them to the angel. The translation process relied on seer stones and has no external verification."
+                },
+                "Reformed Egyptian & Book of Abraham": {
+                    "Claim": "Joseph Smith translated Egyptian characters into scripture, including a language called Reformed Egyptian.",
+                    "Evidence": "No historical evidence exists for a language called 'Reformed Egyptian'. The papyri used for the Book of Abraham have been recovered and shown by Egyptologists to be standard funerary texts, not related to Abraham or Hebrew traditions."
+                }
+            },
+            "Jehovah’s Witnesses": {
+                "New World Translation (JW Bible)": {
+                    "Claim": "Alters key verses to remove Trinity support.",
+                    "Evidence": "Manuscript evidence (e.g. Codex Sinaiticus, Vaticanus) supports traditional readings of John 1:1 and Colossians 1:15."
+                }
+            },
+            "Islam": {
+                "Quranic Inerrancy": {
+                    "Claim": "The Qur’an has remained perfectly preserved, word for word, since Muhammad’s time.",
+                    "Evidence": "Early Islamic manuscripts (e.g., Sana’a palimpsest) show variant readings and orthographic differences, contradicting claims of absolute textual uniformity."
+                }
+            },
+            "Nation of Islam": {
+                "Yakub Story": {
+                    "Claim": "All white people are a separate race created by the scientist Yakub 6,600 years ago.",
+                    "Evidence": "There is no genetic, archaeological or anthropological support for a recent, separate creation of one ‘race’—human evolution and migration patterns contradict this narrative."
+                }
+            },
+            "Hinduism": {
+                "Cyclic Universe Belief": {
+                    "Claim": "The universe is created and destroyed in infinite cycles by Brahma, Vishnu, and Shiva.",
+                    "Evidence": "There is no cosmological or empirical evidence for a repeating destruction–creation cycle; modern cosmology shows a single expanding universe from the Big Bang."
+                }
+            },
+            "Buddhism": {
+                "Karma and Rebirth": {
+                    "Claim": "A soul-less karmic process leads to rebirth until enlightenment.",
+                    "Evidence": "There is no empirical or biological evidence supporting a mechanism for karmic rebirth; memory and personality are brain-based and non-transferrable."
+                }
+            },
+            "Scientology": {
+                "Xenu Origin Story": {
+                    "Claim": "Alien overlord Xenu brought billions of spirits to Earth and exploded them in volcanoes.",
+                    "Evidence": "There is no historical, geological, or astronomical evidence for such an event; this story contradicts all known scientific models."
+                }
+            },
+            "Catholicism": {
+                "Papal Infallibility": {
+                    "Claim": "The Pope is infallible when speaking ex cathedra on matters of doctrine.",
+                    "Evidence": "There is no scriptural foundation in early Christian texts to support the concept of a single infallible human interpreter."
+                }
+            },
+            "Judaism": {
+                "Messiah Yet to Come": {
+                    "Claim": "The Jewish Messiah has not yet arrived.",
+                    "Evidence": "Historical prophecy in Isaiah and Daniel point to the arrival of the Messiah aligning with the time of Jesus of Nazareth."
+                }
+            }
+        }
+
+        religions = religions or all_data.keys()
+        lines = ["=== Debunking Novel Claims ==="]
+        for religion in religions:
+            if religion in all_data:
+                for title, info in all_data[religion].items():
+                    lines.append(f"\n{title}:")
+                    for k, v in info.items():
+                        lines.append(f"  {k}: {v}")
+        return "\n".join(lines)
+
+class DebateResponder:
+    def __init__(self):
+        self.trigger_keywords = {
+            "mormon": "Mormonism",
+            "joseph smith": "Mormonism",
+            "gold plates": "Mormonism",
+            "gold tablets": "Mormonism",
+            "reformed egyptian": "Mormonism",
+            "book of abraham": "Mormonism",
+            "jehovah": "Jehovah’s Witnesses",
+            "islam": "Islam",
+            "quran": "Islam",
+            "nation of islam": "Nation of Islam",
+            "yakub": "Nation of Islam",
+            "hindu": "Hinduism",
+            "buddh": "Buddhism",
+            "sikh": "Sikhism",
+            "scientolog": "Scientology",
+            "catholic": "Catholicism",
+            "pope": "Catholicism",
+            "judaism": "Judaism",
+            "torah": "Judaism"
+        }
+
+    def answer(self, topic: str) -> str:
+        lc = topic.lower()
+        matched_religions = {val for key, val in self.trigger_keywords.items() if key in lc}
+        if matched_religions:
+            if any(word in lc for word in ["explain", "why", "evidence", "sources", "prove"]):
+                return FaithClaimDebunker().to_text(religions=matched_religions)
+            return "This religion contains teachings that differ from the Bible and lacks historical or archaeological support. Type 'explain' to see sources."
+        return "Topic not recognized."

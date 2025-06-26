@@ -1,0 +1,13 @@
+const { EvoAGI } = require("./agi_core");
+const ai = new EvoAGI();
+
+ai.registerTool("summarize", () => "Summarized recent content.");
+ai.registerTool("search", () => "Queried symbolic archive.");
+ai.registerTool("optimize", () => "Optimized task plan.");
+
+(async () => {
+  const result = await ai.simulateCycle("I want to compare prophecy accuracy.");
+  console.log(result);
+
+  ai.saveMemory();  // persists memory to disk
+})();

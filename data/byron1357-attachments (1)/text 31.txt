@@ -1,0 +1,67 @@
+// evo_swarm/tools/expertCodeGenerator.js
+// Expert-level AI tool and code generation module
+
+const LRU = require('lru-cache');
+const { OpenAI } = require('openai');
+
+const openai = new OpenAI();
+const cache = new LRU({ max: 500, ttl: 1000 * 60 * 60 }); // 1h cache
+
+/**
+ * Builds an expert prompt for generating tools or code.
+ * @param {string} userRequest - What the user wants the tool to do
+ * @param {string} toolName - Optional name for the generated tool
+ * @param {string[]} capabilities - List of required capabilities
+ */
+function buildExpertToolPrompt(userRequest, toolName = 'CustomTool', capabilities = []) {
+  const capsList = capabilities.length
+    ? capabilities.map(c => `- ${c}`).join('\n')
+    : '- Core functionality aligned with user request';
+
+  return `You are a world-class AI software architect and developer.
+You will produce a fully functional, production-ready code module named '${toolName}'
+with the following specifications:
+
+${userRequest}
+
+Required Capabilities:
+${capsList}
+
+Additional Requirements:
+- Clean, modular, maintainable code
+- Inline documentation and comments
+- Configuration and dependency management
+- Unit tests covering edge cases and happy paths
+- Security and input validation
+- Automated example usage (e.g., CLI or API snippet)
+- README with setup and usage instructions
+- Adherence to industry best practices and style guides
+`;
+}
+
+/**
+ * Generates a complete expert tool module using AI, caching the result.
+ * @param {string} userRequest
+ * @param {string} toolName
+ * @param {string[]} capabilities
+ */
+async function generateExpertTool(userRequest, toolName, capabilities = []) {
+  const cacheKey = `${toolName}::${capabilities.join(',')}::${userRequest}`;
+  if (cache.has(cacheKey)) return cache.get(cacheKey);
+
+  const prompt = buildExpertToolPrompt(userRequest, toolName, capabilities);
+  const resp = await openai.chat.completions.create({
+    model: 'gpt-4o-mini',
+    temperature: 0.2,
+    messages: [
+      { role: 'system', content: 'You are an expert AI tool generator.' },
+      { role: 'user', content: prompt }
+    ],
+  });
+
+  const code = resp.choices[0].message.content.trim();
+  cache.set(cacheKey, code);
+  return code;
+}
+
+module.exports = { generateExpertTool };

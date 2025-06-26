@@ -1,0 +1,72 @@
+class SwarmRouter:
+    def __init__(self, tier="free"):
+        self.tier = tier
+        self.max_agents = {
+            "free": 1,
+            "pro": 3,
+            "enterprise": float("inf")
+        }.get(tier.lower(), 1)
+
+    def should_activate(self, module_name: str, topic: str) -> bool:
+        topic = topic.lower()
+        relevance_map = {
+            "prophecy": ["prophecy", "fulfill"],
+            "jesus": ["jesus", "teach"],
+            "endtimes": ["end", "gog", "tribulation"],
+            "archaeology": ["archaeology", "scroll", "evidence"],
+            "debate": ["islam", "muhammad", "atheist"]
+        }
+        keywords = relevance_map.get(module_name, [])
+        return any(word in topic for word in keywords)
+
+class EvoStorm:
+    def __init__(self, tier="free"):
+        from evo_swarm.debate_responder import DebateResponder
+        from evo_swarm.prophecy_fulfillment_analyzer import ProphecyFulfillmentAnalyzer
+        from evo_swarm.endtimes_analyzer import EndTimesAnalyzer
+        from evo_swarm.jesus_teachings_analyzer import JesusTeachingsAnalyzer
+        from evo_swarm.archaeology_analyzer import ArchaeologyEvidenceAnalyzer
+
+        self.modules = {
+            "debate": DebateResponder(),
+            "prophecy": ProphecyFulfillmentAnalyzer(),
+            "endtimes": EndTimesAnalyzer(),
+            "jesus": JesusTeachingsAnalyzer(),
+            "archaeology": ArchaeologyEvidenceAnalyzer()
+        }
+
+        self.router = SwarmRouter(tier)
+        self.activated_modules = []
+
+    def respond(self, topic: str) -> dict:
+        topic_lower = topic.lower()
+        responses = {}
+        activated_count = 0
+
+        for name, module in self.modules.items():
+            if activated_count >= self.router.max_agents:
+                break
+
+            if self.router.should_activate(name, topic_lower):
+                try:
+                    if hasattr(module, 'answer'):
+                        responses[name] = module.answer(topic)
+                    elif hasattr(module, 'summarize'):
+                        responses[name] = module.summarize()
+                    elif hasattr(module, 'evaluate'):
+                        responses[name] = module.evaluate()
+                    elif hasattr(module, 'get_teachings'):
+                        responses[name] = module.get_teachings(topic)
+                    else:
+                        responses[name] = f"[No handler for {name}]"
+
+                    self.activated_modules.append(name)
+                    activated_count += 1
+
+                except Exception as e:
+                    responses[name] = f"[Error in {name}]: {str(e)}"
+
+        # Logging for efficiency metrics
+        print(f"[Swarm Log] Topic: '{topic}' | Tier: {self.router.tier} | Activated: {self.activated_modules}")
+
+        return responses if responses else {"note": "No relevant swarm agents activated."}

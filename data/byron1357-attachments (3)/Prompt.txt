@@ -1,0 +1,39 @@
+from fastapi import APIRouter, Request
+import anthropic
+import os
+
+router = APIRouter()
+
+# Initialize Claude client
+claude_client = anthropic.Anthropic(api_key=os.getenv("CLAUDE_API_KEY"))
+
+@router.post("/api/evo/prompt-enhancer")
+async def enhance_prompt(req: Request):
+    body = await req.json()
+    raw_prompt = body.get("input", "").strip()
+
+    if not raw_prompt:
+        return {"error": "Missing input"}
+
+    # Claude system prompt
+    system_instruction = (
+        "You are a prompt enhancer. A user gives you a vague request like 'make a game' or 'build an app', "
+        "and you rewrite it as a highly specific software development prompt. Be precise. Mention platform, tools, and key features."
+    )
+
+    try:
+        response = claude_client.messages.create(
+            model="claude-3-opus-20240125",
+            max_tokens=300,
+            temperature=0.4,
+            system=system_instruction,
+            messages=[
+                {"role": "user", "content": raw_prompt}
+            ]
+        )
+
+        enhanced = response.content[0].text.strip()
+        return {"enhanced_prompt": enhanced}
+
+    except Exception as e:
+        return {"error": str(e)}
